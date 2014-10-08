@@ -37,6 +37,28 @@ def prompt_and_delete_repo(repo_dir):
         sys.exit()
 
 
+def diagnose_repo(repo_url):
+    """
+    Diagnose the repo type using `git ls-remote` and `hg identify`
+
+    :param repo_url:  Repo URL of unknown type
+    :returns: "git" if `git ls-remote` returns 0,
+              "hg" if `hg identify` returns 0.
+    """
+
+    try:
+        subprocess.check_call(['git', 'ls-remote', repo_url])
+        return "git"
+    except subprocess.CalledProcessError:
+        pass
+
+    try:
+        subprocess.check_call(['hg', 'identify', repo_url])
+        return "hg"
+    except subprocess.CalledProcessError:
+        pass
+
+
 def identify_repo(repo_url):
     """
     Determines if `repo_url` should be treated as a URL to a git or hg repo.
@@ -50,7 +72,11 @@ def identify_repo(repo_url):
     elif "bitbucket" in repo_url:
         return "hg"
     else:
-        raise UnknownRepoType
+        repo_type = diagnose_repo(repo_url)
+        if repo_type:
+            return repo_type
+        else:
+            raise UnknownRepoType
 
 
 def clone(repo_url, checkout=None, clone_to_dir="."):
